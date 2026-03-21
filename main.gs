@@ -32,7 +32,7 @@ function updateMonteria() {
 
   // Declarar el año al que corresponden los datos
   
-    addYear()
+    year = addYear()
 
   // Declaramos las hojas destino en el libro destino
 
@@ -150,7 +150,7 @@ function updateInformalidad(){
   
   // Obtener el año en la hoja destino
 
-    addYear()
+    year = addYear()
 
     hojaFormalesEInformales.getRange(hojaFormalesEInformales.getLastRow()+1,1).setValue(year)
     hojaInformalidadMonteria.getRange(hojaInformalidadMonteria.getLastRow()+1,1).setValue(year)
@@ -196,7 +196,7 @@ function updateMonteriaJoven(){
 
   // Obtenemos el dato del año 
 
-    addYear()
+    year = addYear()
 
     hojaMonteriaJoven.getRange(hojaMonteriaJoven.getLastRow()+1,1).setValue(year)  
 
@@ -234,7 +234,7 @@ function updateMonteriaSexo(){
   
   // Obtener el año de los datos
 
-    addYear()
+    year = addYear()
 
   hojaMonteriaSexo.getRange(hojaMonteriaSexo.getLastRow()+1,1).setValue(year)
 
