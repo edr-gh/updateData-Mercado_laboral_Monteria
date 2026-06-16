@@ -1,293 +1,245 @@
-function addYear(){
-      
-  let year
-  let esValido = false
-
-  while(!esValido){
-
-    year = Browser.inputBox("Año","Digite el año de los datos",Browser.Buttons.OK_CANCEL)
-
-    if(year === "cancel"){
-      return;
-    }
-    if(/^\d{4}$/g.test(year)){
-      esValido = true
-    }
-    else{
-      Browser.msgBox("Dato inválido","El dato ingresado no es un valor válido como año",Browser.Buttons.OK)
-    }
-  }
-}
-
+// =====================================================
+// main.gs — FUNCIONES DE ACTUALIZACIÓN + MENÚ
+// =====================================================
+//
+// Cada función updateXxx orquesta el flujo:
+//   1. Leer períodos disponibles en el anexo del DANE
+//   2. Detectar cuáles faltan en la hoja destino
+//   3. Pedir confirmación al usuario
+//   4. Leer y escribir en lote
+//
+// ─── FUNCIONES DE ACTUALIZACIÓN ───────────────────────────────────────────────────────
 
 function updateMonteria() {
-  
-  // Declarar el libro destino
-
-    let libroDestino = SpreadsheetApp.getActiveSpreadsheet()
-
-  // Obtener el libro de datos
-
-    let libroEmpleoYDesempleo = SpreadsheetApp.open(DriveApp.getFilesByName("Empleo y desempleo").next())
-
-  // Declarar el año al que corresponden los datos
-  
-    year = addYear()
-
-  // Declaramos las hojas destino en el libro destino
-
-    let hojaMonteria = libroDestino.getSheetByName("Monteria")
-    let hojaParesRegionales = libroDestino.getSheetByName("TD pares regionales")
-    let hojaParesEconomicos = libroDestino.getSheetByName("TD pares economicos")
-    let hojaDistrinucionPFFT = libroDestino.getSheetByName("Distribucion PFFT")
-    let hojaOcupadosPorRamas = libroDestino.getSheetByName("Ocupados Monteria por ramas")
-
-  // Insertamos el año en las hojas destino
-
-    hojaMonteria.getRange(hojaMonteria.getLastRow()+1,1).setValue(year)
-    hojaParesRegionales.getRange(hojaParesRegionales.getLastRow()+1,1).setValue(year)
-    hojaParesEconomicos.getRange(hojaParesEconomicos.getLastRow()+1,1).setValue(year)
-    hojaDistrinucionPFFT.getRange(hojaDistrinucionPFFT.getLastRow()+1,1).setValue(year)
-    hojaOcupadosPorRamas.getRange(hojaOcupadosPorRamas.getLastRow()+1,1).setValue(year)
-
-  // Insertamos el trimestre correspondiente a los datos en las hojas correspondientes
-
-    let hojaDatosMonteria = libroEmpleoYDesempleo.getSheetByName("Total 23 ciudades A.M. Trim")
-    let trim = hojaDatosMonteria.getRange(222,hojaDatosMonteria.getLastColumn()).getValue().toString().replace(/\d+/g,"").replace(/\s/g,"")
-    
-    hojaMonteria.getRange(hojaMonteria.getLastRow(),2).setValue(trim)
-    hojaParesRegionales.getRange(hojaMonteria.getLastRow(),2).setValue(trim)
-    hojaParesEconomicos.getRange(hojaMonteria.getLastRow(),2).setValue(trim)
-    hojaDistrinucionPFFT.getRange(hojaDistrinucionPFFT.getLastRow(),2).setValue(trim)
-    hojaOcupadosPorRamas.getRange(hojaOcupadosPorRamas.getLastRow(),2).setValue(trim)
-
-  // Obtenemos y colocamos los datos en la hoja "Monteria" del libro destino
-
-    let datosMonteria1 = hojaDatosMonteria.getRange(223,hojaDatosMonteria.getLastColumn(),5,1).getValues()
-    let datosMonteria2 = hojaDatosMonteria.getRange(229,hojaDatosMonteria.getLastColumn(),8,1).getValues()
-
-    let datosTranspuestosMonteria1 = datosMonteria1[0].map((_,column)=>datosMonteria1.map(row=>row[column]))
-    let datosTranspuestosMonteria2 = datosMonteria2[0].map((_,column)=>datosMonteria2.map(row=>row[column]))
-
-    
-    hojaMonteria.getRange(hojaMonteria.getLastRow(),3,1,5).setValues(datosTranspuestosMonteria1)
-    hojaMonteria.getRange(hojaMonteria.getLastRow(),8,1,8).setValues(datosTranspuestosMonteria2)
-
-  // Obtenemos y colocamos los datos en la hoja "TD pares regionales" del libro destino
-    
-    let filasTDParesRegionales = [226,397,340,416,93,245,454]
-    let datosTDParesRegionales = [[]]
-
-    for(let i =0;i<filasTDParesRegionales.length;i++){
-      let tdParesRegionales = hojaDatosMonteria.getRange(filasTDParesRegionales[i],hojaDatosMonteria.getLastColumn()).getValue()
-      datosTDParesRegionales[0].push(tdParesRegionales)
-    }
-    
-    hojaParesRegionales.getRange(hojaParesRegionales.getLastRow(),3,1,7).setValues(datosTDParesRegionales)    
-
-  // Obtenemos y colocamos los datos en la hoja "TD pares economicos" del libro destino
-
-    let filasTDParesEconomicos = [226,378,416,150,340,321,435]
-    let datosTDParesEconomicos = [[]]
-    
-    for(let i =0; i<filasTDParesEconomicos.length; i++){
-      let tdParesEconomicos = hojaDatosMonteria.getRange(filasTDParesEconomicos[i],hojaDatosMonteria.getLastColumn()).getValue()  
-      datosTDParesEconomicos[0].push(tdParesEconomicos)
-    }
-
-    hojaParesEconomicos.getRange(hojaParesEconomicos.getLastRow(),3,1,7).setValues(datosTDParesEconomicos)
-
-  // Obtenemos y colocamos los datos en la hoja "Distribucion PFFT" del libro destino
-
-    let hojaDatosPFFT = libroEmpleoYDesempleo.getSheetByName("Pob_fuera_fuerza_trab_T13ciud")
-
-    let datosPFFT = hojaDatosPFFT.getRange(77,hojaDatosPFFT.getLastColumn(),3,1).getValues()
-
-    let datosTranspuestosPFFT = datosPFFT[0].map((_,column)=>datosPFFT.map(row=>row[column]))
-
-    hojaDistrinucionPFFT.getRange(hojaDistrinucionPFFT.getLastRow(),3,1,3).setValues(datosTranspuestosPFFT)
-
-  // Obtenemos y colocamos los datos en la hoja "Ocupados Monteria por ramas"
-
-    let hojaDatosOcupadosPorRamas = libroEmpleoYDesempleo.getSheetByName("Ocupados 23 Ciudades_rama_Trim")
-
-    let datosOcupadosRamas = hojaDatosOcupadosPorRamas.getRange(147,hojaDatosOcupadosPorRamas.getLastColumn(),16,1).getValues()
-
-    let datosTranspuestosOcupadosRamas = datosOcupadosRamas[0].map((_,column)=>datosOcupadosRamas.map(row=>row[column]))
-
-    hojaOcupadosPorRamas.getRange(hojaOcupadosPorRamas.getLastRow(),3,1,16).setValues(datosTranspuestosOcupadosRamas)
-
-  // Finalmente, cambiamos el rango nombrado para cada hoja del libro destino
-
-    hojaMonteria.getNamedRanges()[0].setRange(
-      hojaMonteria.getRange(1,1,hojaMonteria.getLastRow(),hojaMonteria.getLastColumn())
-      )
-    hojaParesRegionales.getNamedRanges()[0].setRange(
-      hojaParesRegionales.getRange(1,1,hojaParesRegionales.getLastRow(),hojaParesRegionales.getLastColumn())
-      )
-    hojaParesEconomicos.getNamedRanges()[0].setRange(
-      hojaParesEconomicos.getRange(1,1,hojaParesEconomicos.getLastRow(),hojaParesEconomicos.getLastColumn())
-      )
-    hojaDistrinucionPFFT.getNamedRanges()[0].setRange(
-      hojaDistrinucionPFFT.getRange(1,1,hojaDistrinucionPFFT.getLastRow(),hojaDistrinucionPFFT.getLastColumn())
-      )
-    hojaOcupadosPorRamas.getNamedRanges()[0].setRange(
-      hojaOcupadosPorRamas.getRange(1,1,hojaOcupadosPorRamas.getLastRow(),hojaOcupadosPorRamas.getLastColumn())
-    )
-}
-
-function updateInformalidad(){
-
-  // Declarando los libros y hojas de datos y destino
-    let libroDestino = SpreadsheetApp.getActiveSpreadsheet()
-    let libroEmpleoInformalYSeguridadSocial = SpreadsheetApp.open(DriveApp.getFilesByName("Empleo informal y seguridad social").next())
-    
-    let hojaFormalesEInformales = libroDestino.getSheetByName("Formales e informales Monteria")
-    let hojaDatosFormalesEInformales = libroEmpleoInformalYSeguridadSocial.getSheetByName("Ciudades")
-    
-    let hojaInformalidadMonteria = libroDestino.getSheetByName("Proporcion de Informalidad")
-    let hojaDatosInformalidad = libroEmpleoInformalYSeguridadSocial.getSheetByName("Prop informalidad")
-  
-  // Obtener el año en la hoja destino
-
-    year = addYear()
-
-    hojaFormalesEInformales.getRange(hojaFormalesEInformales.getLastRow()+1,1).setValue(year)
-    hojaInformalidadMonteria.getRange(hojaInformalidadMonteria.getLastRow()+1,1).setValue(year)
-
-  // Obtener y colocar el trimestre de los datos en la hoja y libro destino
-    let trim = hojaDatosFormalesEInformales.getRange(12,hojaDatosFormalesEInformales.getLastColumn())
-      .getValue().toString().replace(/\d+/g,"").replace(/\s+/g,"").replace(/\w+/g,(match)=>match.charAt(0).toUpperCase()+match.slice(1))
-
-    hojaFormalesEInformales.getRange(hojaFormalesEInformales.getLastRow(),2).setValue(trim)
-    hojaInformalidadMonteria.getRange(hojaInformalidadMonteria.getLastRow(),2).setValue(trim)
-  
-  // Obtener y colocar datos en la hoja "Formales e informales Monteria" del libro destino
-    let datosFormalesEInformales = hojaDatosFormalesEInformales.getRange(46,hojaDatosFormalesEInformales.getLastColumn(),3,1).getValues()  
-    let datosTranspuestosFormalesEInformales = datosFormalesEInformales[0].map((_,column)=>datosFormalesEInformales.map(row=>row[column]))
-
-    hojaFormalesEInformales.getRange(hojaFormalesEInformales.getLastRow(),3,1,3).setValues(datosTranspuestosFormalesEInformales)
-
-  // Obtener y colocar datos en la hoja "Proporcion de Informalidad" del libro destino
-    let datosInformalidad = hojaDatosInformalidad.getRange(13,hojaDatosInformalidad.getLastColumn(),26,1).getValues()
-
-    let datosTranpuestosInformalidad = datosInformalidad[0].map((_,column)=>datosInformalidad.map(row=>row[column]))
-
-    hojaInformalidadMonteria.getRange(hojaInformalidadMonteria.getLastRow(),3,1,26).setValues(datosTranpuestosInformalidad)
-  
-  // Finalmente, cambiamos el rango nombrado para cada hoja en el libro destino
-      hojaFormalesEInformales.getNamedRanges()[0].setRange(
-        hojaFormalesEInformales.getRange(1,1,hojaFormalesEInformales.getLastRow(),hojaFormalesEInformales.getLastColumn())
-        )
-      hojaInformalidadMonteria.getNamedRanges()[0].setRange(
-        hojaInformalidadMonteria.getRange(1,1,hojaInformalidadMonteria.getLastRow(),hojaInformalidadMonteria.getLastColumn())
-      )
-}
-
-function updateMonteriaJoven(){
-
-  // Declaramos el libro y las hojas destino y de datos
-
-    let libroDestino = SpreadsheetApp.getActiveSpreadsheet()
-    let libroDatosMonteriaJoven = SpreadsheetApp.open(DriveApp.getFilesByName("Mercado laboral de la juventud").next())
-
-    let hojaMonteriaJoven = libroDestino.getSheetByName("Monteria Joven")
-    let hojaDatosMonteriaJoven = libroDatosMonteriaJoven.getSheetByName("23 ciudades trim móvil")
-
-  // Obtenemos el dato del año 
-
-    year = addYear()
-
-    hojaMonteriaJoven.getRange(hojaMonteriaJoven.getLastRow()+1,1).setValue(year)  
-
-  // Obtenemos el trimestre de los datos
-
-    let trim = hojaDatosMonteriaJoven.getRange(202,hojaDatosMonteriaJoven.getLastColumn())
-      .getValue().toString().replace(/\d+/g,"").replace(/\s+/g,"")
-
-    hojaMonteriaJoven.getRange(hojaMonteriaJoven.getLastRow(),2).setValue(trim)
-
-
-  // Obtenemos y colocamos los datos en el libro destino
-
-    let datosMonteriaJoven = hojaDatosMonteriaJoven.getRange(203,hojaDatosMonteriaJoven.getLastColumn(),11,1).getValues()
-    let datosTranspuestosMonteriaJoven = datosMonteriaJoven[0].map((_,column)=>datosMonteriaJoven.map(row=>row[column]))
-
-    hojaMonteriaJoven.getRange(hojaMonteriaJoven.getLastRow(),3,1,11).setValues(datosTranspuestosMonteriaJoven)
-
-  // Finalmente, cambiamos el rango nombrado en la hoja destino
-    hojaMonteriaJoven.getNamedRanges()[0].setRange(
-      hojaMonteriaJoven.getRange(1,1,hojaMonteriaJoven.getLastRow(),hojaMonteriaJoven.getLastColumn())
-    )
-}
-
-function updateMonteriaSexo(){
-  
-  // Declarando los libros y hojas de datos y destino
-
-    let libroDestino = SpreadsheetApp.getActiveSpreadsheet()
-    let libroMonteriaSexo = SpreadsheetApp.open(DriveApp.getFilesByName("Mercado laboral según sexo").next())
-
-    let hojaMonteriaSexo = libroDestino.getSheetByName("Monteria por sexo")
-    let hojaDatosMonteriaHombres = libroMonteriaSexo.getSheetByName("Hombres - 23 Ciud")
-    let hojaDatosMonteriaMujeres = libroMonteriaSexo.getSheetByName("Mujeres - 23 Ciud")
-  
-  // Obtener el año de los datos
-
-    year = addYear()
-
-  hojaMonteriaSexo.getRange(hojaMonteriaSexo.getLastRow()+1,1).setValue(year)
-
-  // Obtener y colocar el trimestre de los datos
-
-    let trim = hojaDatosMonteriaHombres.getRange(186,hojaDatosMonteriaHombres.getLastColumn())
-    .getValue().toString().replace(/\d+/g,"").replace(/\s+/g,"")
-
-    hojaMonteriaSexo.getRange(hojaMonteriaSexo.getLastRow(),2).setValue(trim)
-
-  // Obtener los datos de "Hombres" y "Mujeres" del libro de datos y copiarlos en el libro destino
-
-    let datosHombres1 = hojaDatosMonteriaHombres.getRange(187,hojaDatosMonteriaHombres.getLastColumn(),4,1).getValues()
-    let datosHombres2 = hojaDatosMonteriaHombres.getRange(192,hojaDatosMonteriaHombres.getLastColumn(),5,1).getValues()
-
-    let datosTranspuestosHombres1 = datosHombres1[0].map((_,column)=>datosHombres1.map(row=>row[column]))
-    let datosTranspuestosHombres2 = datosHombres2[0].map((_,column)=>datosHombres2.map(row=>row[column]))
-
-    hojaMonteriaSexo.getRange(hojaMonteriaSexo.getLastRow(),3,1,4).setValues(datosTranspuestosHombres1)
-    hojaMonteriaSexo.getRange(hojaMonteriaSexo.getLastRow(),7,1,5).setValues(datosTranspuestosHombres2)
-
-    let datosMujeres1 = hojaDatosMonteriaMujeres.getRange(187,hojaDatosMonteriaMujeres.getLastColumn(),4,1).getValues()
-    let datosMujeres2 = hojaDatosMonteriaMujeres.getRange(192,hojaDatosMonteriaMujeres.getLastColumn(),5,1).getValues()
-    
-    let datosTranspuestosMujeres1 = datosMujeres1[0].map((_,column)=>datosMujeres1.map(row=>row[column]))
-    let datosTranspuestosMujeres2 = datosMujeres2[0].map((_,column)=>datosMujeres2.map(row=>row[column]))
-
-    hojaMonteriaSexo.getRange(hojaMonteriaSexo.getLastRow(),12,1,4).setValues(datosTranspuestosMujeres1)
-    hojaMonteriaSexo.getRange(hojaMonteriaSexo.getLastRow(),16,1,5).setValues(datosTranspuestosMujeres2)
-
-  // Finalmente, cambiamos el rango nombrado en la hoja destino
-    hojaMonteriaSexo.getNamedRanges()[0].setRange(
-      hojaMonteriaSexo.getRange(1,1,hojaMonteriaSexo.getLastRow(),hojaMonteriaSexo.getLastColumn())
-    )
-}
-
-function menuActualizarDatos(){
-
-  let ui = SpreadsheetApp.getUi()
-
-  let menu = ui.createMenu("updateData")
-
-  menu.addItem("Actualizar datos de Montería, pares regionales y economicos","updateMonteria")
-    .addItem("Actualizar datos sobre informalidad","updateInformalidad")
-    .addItem("Actualizar datos sobre Mercado laboral de la Juventud","updateMonteriaJoven")
-    .addItem("Actualizar datos sobre Mercado laboral según sexo","updateMonteriaSexo")
-    .addItem("Descargar archivos","descargarArchivos")
-    .addToUi()
+  const libroDestino          = SpreadsheetApp.getActiveSpreadsheet();
+  const libroEmpleoYDesempleo = abrirLibro("Empleo y desempleo");
+
+  // Hojas fuente
+  const srcPrincipal = libroEmpleoYDesempleo.getSheetByName("Total 23 ciudades A.M. Trim");
+  const srcPFFT      = libroEmpleoYDesempleo.getSheetByName("Pob_fuera_fuerza_trab_T13ciud");
+  const srcRamas     = libroEmpleoYDesempleo.getSheetByName("Ocupados 23 Ciudades_rama_Trim");
+
+  // Hojas destino
+  const dstMonteria = libroDestino.getSheetByName("Monteria");
+  const dstParesReg = libroDestino.getSheetByName("TD pares regionales");
+  const dstParesEco = libroDestino.getSheetByName("TD pares economicos");
+  const dstPFFT     = libroDestino.getSheetByName("Distribucion PFFT");
+  const dstRamas    = libroDestino.getSheetByName("Ocupados Monteria por ramas");
+
+  // Detectar períodos faltantes
+  const { yearRow: yrM, monthRow: moM } = SHEET_CONFIG.EMPLEO_DESEMPLEO;
+  const periodosDisponibles = buildPeriodList(srcPrincipal, yrM, moM);
+  const periodosRegistrados = getRegisteredPeriods(dstMonteria);
+  const periodosFaltantes   = findMissingPeriods(periodosDisponibles, periodosRegistrados);
+  if (!confirmarPeriodos(periodosFaltantes, "Montería")) return;
+
+  const N           = periodosFaltantes.length;
+  const missingCols = periodosFaltantes.map(p => p.col);
+
+  // Preparar hojas secundarias (cada una tiene su propio mapa de columnas)
+  const { yearRow: yrP, monthRow: moP } = SHEET_CONFIG.PFFT;
+  const { yearRow: yrR, monthRow: moR } = SHEET_CONFIG.RAMAS;
+  const pfftInfo  = prepararHojaSecundaria(srcPFFT,  yrP, moP,  77,  3, periodosFaltantes);
+  const ramasInfo = prepararHojaSecundaria(srcRamas, yrR, moR, 147, 16, periodosFaltantes);
+
+  // ── Lectura en lote desde hoja principal
+  const rawB1       = leerBloqueYColumnas(srcPrincipal, 223, 5, missingCols);  // [5 × N]
+  const rawB2       = leerBloqueYColumnas(srcPrincipal, 229, 8, missingCols);  // [8 × N]
+  const rawParesReg = leerFilasYColumnas(srcPrincipal, FILAS_PARES_REGIONALES, missingCols); // [7 × N]
+  const rawParesEco = leerFilasYColumnas(srcPrincipal, FILAS_PARES_ECONOMICOS, missingCols); // [7 × N]
+
+  // ── Capturar filas destino ANTES de cualquier escritura
+  const sr = {
+    monteria: dstMonteria.getLastRow() + 1,
+    paresReg: dstParesReg.getLastRow() + 1,
+    paresEco: dstParesEco.getLastRow() + 1,
+    pfft:     dstPFFT.getLastRow() + 1,
+    ramas:    dstRamas.getLastRow() + 1,
+  };
+
+  // ── Escritura en lote (una llamada a setValues() por bloque)
+  const yearTrimData = periodosFaltantes.map(p => [p.year, p.trim]);
+
+  dstMonteria.getRange(sr.monteria, 1, N, 2).setValues(yearTrimData);
+  dstParesReg.getRange(sr.paresReg, 1, N, 2).setValues(yearTrimData);
+  dstParesEco.getRange(sr.paresEco, 1, N, 2).setValues(yearTrimData);
+  dstPFFT    .getRange(sr.pfft,     1, N, 2).setValues(yearTrimData);
+  dstRamas   .getRange(sr.ramas,    1, N, 2).setValues(yearTrimData);
+
+  dstMonteria.getRange(sr.monteria, 3, N, 5).setValues(
+    periodosFaltantes.map((_, i) => rawB1.map(r => r[i]))
+  );
+  dstMonteria.getRange(sr.monteria, 8, N, 8).setValues(
+    periodosFaltantes.map((_, i) => rawB2.map(r => r[i]))
+  );
+  dstParesReg.getRange(sr.paresReg, 3, N, 7).setValues(
+    periodosFaltantes.map((_, i) => rawParesReg.map(r => r[i]))
+  );
+  dstParesEco.getRange(sr.paresEco, 3, N, 7).setValues(
+    periodosFaltantes.map((_, i) => rawParesEco.map(r => r[i]))
+  );
+  dstPFFT.getRange(sr.pfft,   3, N,  3).setValues(
+    buildWriteMatrix(periodosFaltantes,
+      pfftInfo.colsForPeriods,  pfftInfo.rawData,  pfftInfo.colToOffset,   3)
+  );
+  dstRamas.getRange(sr.ramas, 3, N, 16).setValues(
+    buildWriteMatrix(periodosFaltantes,
+      ramasInfo.colsForPeriods, ramasInfo.rawData, ramasInfo.colToOffset, 16)
+  );
+
+  [dstMonteria, dstParesReg, dstParesEco, dstPFFT, dstRamas].forEach(actualizarRangoNombrado);
+  SpreadsheetApp.flush();
+  Browser.msgBox(`✅ ${N} período(s) actualizados correctamente en Montería.`);
 }
 
 
-function onOpen(){
+function updateInformalidad() {
+  const libroDestino = SpreadsheetApp.getActiveSpreadsheet();
+  const libroInform  = abrirLibro("Empleo informal y seguridad social");
 
-  menuActualizarDatos()
+  const srcCiudades   = libroInform.getSheetByName("Ciudades");
+  const srcPropInform = libroInform.getSheetByName("Prop informalidad");
 
+  const dstFormales     = libroDestino.getSheetByName("Formales e informales Monteria");
+  const dstInformalidad = libroDestino.getSheetByName("Proporcion de Informalidad");
+
+  const { yearRow, monthRow } = SHEET_CONFIG.INFORMALIDAD;
+  const periodosDisponibles = buildPeriodList(srcCiudades, yearRow, monthRow);
+  const periodosRegistrados = getRegisteredPeriods(dstFormales);
+  const periodosFaltantes   = findMissingPeriods(periodosDisponibles, periodosRegistrados);
+  if (!confirmarPeriodos(periodosFaltantes, "Informalidad")) return;
+
+  const N           = periodosFaltantes.length;
+  const missingCols = periodosFaltantes.map(p => p.col);
+
+  const { yearRow: yrProp, monthRow: moProp } = SHEET_CONFIG.INFORMALIDAD_PROP;
+  const propInfo = prepararHojaSecundaria(
+    srcPropInform, yrProp, moProp, 13, 26, periodosFaltantes
+  );
+
+  const rawFormales = leerBloqueYColumnas(srcCiudades, 46, 3, missingCols);  // [3 × N]
+
+  const srFormales     = dstFormales.getLastRow() + 1;
+  const srInformalidad = dstInformalidad.getLastRow() + 1;
+
+  const yearTrimData = periodosFaltantes.map(p => [p.year, p.trim]);
+  dstFormales    .getRange(srFormales,     1, N, 2).setValues(yearTrimData);
+  dstInformalidad.getRange(srInformalidad, 1, N, 2).setValues(yearTrimData);
+
+  dstFormales.getRange(srFormales, 3, N, 3).setValues(
+    periodosFaltantes.map((_, i) => rawFormales.map(r => r[i]))
+  );
+  dstInformalidad.getRange(srInformalidad, 3, N, 26).setValues(
+    buildWriteMatrix(periodosFaltantes,
+      propInfo.colsForPeriods, propInfo.rawData, propInfo.colToOffset, 26)
+  );
+
+  [dstFormales, dstInformalidad].forEach(actualizarRangoNombrado);
+  SpreadsheetApp.flush();
+  Browser.msgBox(`✅ ${N} período(s) de informalidad actualizados correctamente.`);
+}
+
+
+function updateMonteriaJoven() {
+  const libroDestino = SpreadsheetApp.getActiveSpreadsheet();
+  const libroJoven   = abrirLibro("Mercado laboral de la juventud");
+
+  const srcJoven = libroJoven.getSheetByName("23 ciudades trim móvil");
+  const dstJoven = libroDestino.getSheetByName("Monteria Joven");
+
+  // GEIHMLJ incluye el año en cada celda de mes ('Ene - Mar 26')
+  // → parsePeriodHeader lo extrae directamente de los 2 dígitos
+  const { yearRow, monthRow } = SHEET_CONFIG.JUVENTUD;
+  const periodosDisponibles = buildPeriodList(srcJoven, yearRow, monthRow);
+  const periodosRegistrados = getRegisteredPeriods(dstJoven);
+  const periodosFaltantes   = findMissingPeriods(periodosDisponibles, periodosRegistrados);
+  if (!confirmarPeriodos(periodosFaltantes, "Mercado laboral juvenil")) return;
+
+  const N           = periodosFaltantes.length;
+  const missingCols = periodosFaltantes.map(p => p.col);
+
+  const rawJoven = leerBloqueYColumnas(srcJoven, 203, 11, missingCols);  // [11 × N]
+
+  const srJoven = dstJoven.getLastRow() + 1;
+
+  dstJoven.getRange(srJoven, 1, N,  2).setValues(periodosFaltantes.map(p => [p.year, p.trim]));
+  dstJoven.getRange(srJoven, 3, N, 11).setValues(
+    periodosFaltantes.map((_, i) => rawJoven.map(r => r[i]))
+  );
+
+  actualizarRangoNombrado(dstJoven);
+  SpreadsheetApp.flush();
+  Browser.msgBox(`✅ ${N} período(s) del mercado laboral juvenil actualizados correctamente.`);
+}
+
+
+function updateMonteriaSexo() {
+  const libroDestino = SpreadsheetApp.getActiveSpreadsheet();
+  const libroSexo    = abrirLibro("Mercado laboral según sexo");
+
+  const srcHombres = libroSexo.getSheetByName("Hombres - 23 Ciud");
+  const srcMujeres = libroSexo.getSheetByName("Mujeres - 23 Ciud");
+  const dstSexo    = libroDestino.getSheetByName("Monteria por sexo");
+
+  // Hombres como fuente primaria; mujeres tiene su propio mapa (misma estructura, mismas columnas)
+  const { yearRow, monthRow } = SHEET_CONFIG.SEXO;
+  const periodosDisponibles = buildPeriodList(srcHombres, yearRow, monthRow);
+  const periodosRegistrados = getRegisteredPeriods(dstSexo);
+  const periodosFaltantes   = findMissingPeriods(periodosDisponibles, periodosRegistrados);
+  if (!confirmarPeriodos(periodosFaltantes, "Mercado laboral por sexo")) return;
+
+  const N           = periodosFaltantes.length;
+  const missingCols = periodosFaltantes.map(p => p.col);
+
+  // Mujeres: resolver columnas desde su propio encabezado
+  const mapMujeres     = buildPeriodMap(srcMujeres, yearRow, monthRow);
+  const mujeresCols    = periodosFaltantes.map(p => mapMujeres[p.key] || null);
+  const uniqueColsMuj  = [...new Set(mujeresCols.filter(Boolean))].sort((a, b) => a - b);
+  const mujColToOffset = Object.fromEntries(uniqueColsMuj.map((col, i) => [col, i]));
+
+  // Lectura en lote
+  const rawH1 = leerBloqueYColumnas(srcHombres, 187, 4, missingCols);  // % PET, TGP, TO, TD  [4 × N]
+  const rawH2 = leerBloqueYColumnas(srcHombres, 192, 5, missingCols);  // Pob total…PD         [5 × N]
+  const rawM1 = uniqueColsMuj.length > 0
+    ? leerBloqueYColumnas(srcMujeres, 187, 4, uniqueColsMuj) : [];
+  const rawM2 = uniqueColsMuj.length > 0
+    ? leerBloqueYColumnas(srcMujeres, 192, 5, uniqueColsMuj) : [];
+
+  const buildMujMatrix = (raw, nc) => periodosFaltantes.map((p, i) => {
+    const col = mujeresCols[i];
+    if (!col) { Logger.log("ADVERTENCIA: período %s no en hoja Mujeres.", p.key);
+                return new Array(nc).fill(""); }
+    return raw.map(r => r[mujColToOffset[col]]);
+  });
+
+  const srSexo = dstSexo.getLastRow() + 1;
+
+  dstSexo.getRange(srSexo,  1, N,  2).setValues(periodosFaltantes.map(p => [p.year, p.trim]));
+  dstSexo.getRange(srSexo,  3, N,  4).setValues(periodosFaltantes.map((_, i) => rawH1.map(r => r[i])));
+  dstSexo.getRange(srSexo,  7, N,  5).setValues(periodosFaltantes.map((_, i) => rawH2.map(r => r[i])));
+  dstSexo.getRange(srSexo, 12, N,  4).setValues(buildMujMatrix(rawM1, 4));
+  dstSexo.getRange(srSexo, 16, N,  5).setValues(buildMujMatrix(rawM2, 5));
+
+  actualizarRangoNombrado(dstSexo);
+  SpreadsheetApp.flush();
+  Browser.msgBox(`✅ ${N} período(s) del mercado laboral por sexo actualizados correctamente.`);
+}
+
+// ─── MENÚ ─────────────────────────────────────────────────────────────────────────────
+
+function menuActualizarDatos() {
+  SpreadsheetApp.getUi()
+    .createMenu("📊 Actualizar Datos")
+    .addItem("Montería, pares regionales y económicos", "updateMonteria")
+    .addItem("Empleo informal y seguridad social",      "updateInformalidad")
+    .addItem("Mercado laboral de la juventud",          "updateMonteriaJoven")
+    .addItem("Mercado laboral según sexo",              "updateMonteriaSexo")
+    .addSeparator()
+    .addItem("📋 Crear hojas con la disposición",       "crearHojasDisposicion")
+    .addItem("⬇️  Descargar archivos del DANE",         "descargarArchivos")
+    .addToUi();
+}
+
+function onOpen() {
+  menuActualizarDatos();
 }
