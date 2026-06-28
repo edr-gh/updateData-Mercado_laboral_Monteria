@@ -340,9 +340,3 @@ Cada hoja destino tiene un rango nombrado que el script redimensiona automática
 * **hoja "Proporcion de Informalidad"**: En esta hoja la tabla se llama "Informalidad".
 * **hoja "Monteria Joven"**: En esta hoja la tabla se llama "Monteria_Joven".
 * **hoja "Monteria por sexo"**: En esta hoja la tabla se llama "Monteria_por_S".
-
-## Autoría
-
-Desarrollado y mantenido por **Esteban Rodríguez**.
-
-Refactorizado y documentado con la asistencia de **Claude Opus 4.8** (Anthropic).
